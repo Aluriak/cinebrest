@@ -73,7 +73,7 @@ def parse_les_studios(*, URL='https://www.cine-studios.fr/films-a-l-affiche/') -
         soup = get_page(url)
         todays = tuple(soup.find_all('td', **{'class': 'today'}))
         assert len(todays) == 1, todays
-        todays = tuple((hour, '?') for hour in (str(elm.text).strip() for elm in todays[0]) if hour)
+        todays = tuple((hour, 'VO?') for hour in (str(elm.text).strip() for elm in todays[0]) if hour)
         yield {
             'title': next(iter(soup.find_all('h3', **{'class': 'fn'}))).text,
             'synopsis': next(iter(soup.find_all('p', **{'class': 'synopsis'}))).text,
