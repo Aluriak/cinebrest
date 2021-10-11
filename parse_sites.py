@@ -1,6 +1,8 @@
 
 
 import requests
+import datetime
+import zoneinfo
 import json
 import time
 import bs4
@@ -10,18 +12,18 @@ CACHE_FILE = 'cache.json'
 REGEX_HOUR = re.compile(r"([0-9]{1,2})[hH:]([0-9]{0,2})[mM]?")
 
 def now_in_year_month_day(type_=int) -> (int, int, int) or str:
-    now = time.localtime(time.time())
+    now = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Paris'))
     if type_ is str:
-        return f"{now.tm_year}-{now.tm_mon:02d}-{now.tm_mday:02d}"
+        return f"{now.year}-{now.month:02d}-{now.day:02d}"
     else:
-        return now.tm_year, now.tm_mon, now.tm_mday
+        return now.year, now.month, now.day
 
 def now_in_hour_and_minutes(type_=int) -> (int, int) or str:
-    now = time.localtime(time.time())
+    now = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Paris'))
     if type_ is str:
-        return f"{now.tm_hour:02d}h{now.tm_min:02d}"
+        return f"{now.hour:02d}h{now.minute:02d}"
     else:
-        return now.tm_hour, now.tm_min
+        return now.hour, now.minute
 
 def is_in_the_future(given_hour: str) -> bool:
     match = REGEX_HOUR.fullmatch(given_hour)
