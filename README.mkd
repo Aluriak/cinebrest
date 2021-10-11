@@ -1,0 +1,6 @@
+# cinébrest
+
+Scrap les 3 sites des 3 cinémas de Brest, et indique les prochaines séances de la journée.
+
+
+`main.py` génère un résultat dans le terminal, `web.py` génère un site web.
