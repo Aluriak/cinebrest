@@ -121,7 +121,7 @@ def parse_all():
     global CACHE
     CACHE = load_cache()
     save_cache()
-    print(f"{len(CACHE)} pages cached")
+    # print(f"{len(CACHE)} pages cached")
     yield from parse_les_studios()
     yield from parse_paté_gaumont()
     save_cache()
