@@ -78,7 +78,6 @@ def parse_les_studios(*, URL='https://www.cine-studios.fr/films-a-l-affiche/') -
             'title': next(iter(soup.find_all('h3', **{'class': 'fn'}))).text,
             'synopsis': next(iter(soup.find_all('p', **{'class': 'synopsis'}))).text,
             'today': todays,
-            'ok': tuple((hour, kind) for hour, kind in todays if is_in_the_future(hour)),
             'where': 'Les Studios',
         }
 
@@ -112,7 +111,6 @@ def parse_paté_gaumont() -> [dict]:
                 'title': movie_metadata['title'],
                 'synopsis': movie_metadata['synopsis'],
                 'today': todays,
-                'ok': todays,
                 'where': 'Multiplexe Liberté',
             }
 
@@ -159,10 +157,26 @@ def parse_le_celtic() -> [dict]:
             'title': title,
             'synopsis': next(iter(subsoup.find_all('p', **{'class': 'ff_synopsis'}))).text.strip(),
             'today': hours,
-            'ok': tuple((hour, kind) for hour, kind in hours if is_in_the_future(hour)),
             'where': 'Le Celtic',
         }
 
+
+
+def repr_hour_and_kind(it:iter, where) -> [str]:
+    return tuple(f"{h} ({k}) à {where}" for h, k in it)
+
+def slugified(title: str) -> str:
+    "Tries hard to get a unique representation of given movie title"
+    title = title.lower().replace(' -', '').replace('  ', ' ').replace(' ', '-')
+    unwanted = '():\'"'
+    OK = {v: k for k, vs in {
+        'a': 'àäâ',
+        'e': 'èëêé',
+        'i': 'ìïî',
+        'o': 'òöô',
+        'u': 'ùüû',
+    }.items() for v in vs}
+    return ''.join(OK.get(c, c) for c in title if c not in unwanted)
 
 
 CACHE = {}
@@ -170,21 +184,30 @@ def parse_all(use_cache: bool = True):
     global CACHE
     CACHE = load_cache() if use_cache else {}
     if use_cache: save_cache()
-    # print(f"{len(CACHE)} pages cached")
+    if use_cache: print(f"{len(CACHE)} pages cached")
     movies = {}  # name -> horaires
     def gen_all():
         yield from parse_les_studios()
         yield from parse_paté_gaumont()
         yield from parse_le_celtic()
     for movie in gen_all():
-        descs = tuple(f"{h} ({k}) à {movie['where']}" for h, k in movie['ok'])
-        descs_todays = tuple(f"{h} ({k}) à {movie['where']}" for h, k in movie['today'])
-        obj = movies.setdefault(movie['title'], {})
-        obj.setdefault('hours', []).extend(descs)
-        obj.setdefault('today', []).extend(descs_todays)
+        slug = slugified(movie['title'])
+        if not movie['today']:
+            continue  # ignore that one, there is no séances today
+        obj = movies.setdefault(slug, {})
+        obj.setdefault('today', []).extend(movie['today'])
+        obj.setdefault('hours', []).extend((hour, kind) for hour, kind in movie['today'] if is_in_the_future(hour))
+        if 'slug' in movie and len(movie['slug']) > len(obj.get('slug', '')):
+            obj['slug'] = movie['slug']
+        if 'where' in movie and len(movie['where']) > len(obj.get('where', '')):
+            obj['where'] = movie['where']
         if 'title' in movie and len(movie['title']) > len(obj.get('title', '')):
             obj['title'] = movie['title']
         if 'synopsis' in movie and len(movie['synopsis']) > len(obj.get('synopsis', '')):
             obj['synopsis'] = movie['synopsis']
+    for movie in movies.values():
+        movie['desc_hours'] = repr_hour_and_kind(movie['hours'], movie['where'])
+        movie['desc_today'] = repr_hour_and_kind(movie['today'], movie['where'])
+
     save_cache()
     yield from movies.values()
