@@ -27,4 +27,4 @@ if __name__ == "__main__":
     html = markdown.markdown('\n'.join(run()))
     outfile = sys.argv[1] if len(sys.argv) > 1 else OUTFILE
     with open(outfile, 'w') as fd:
-        fd.write(html)
+        fd.write('<head><meta charset="utf-8"/></head><body>\n' + html + '</body>')
