@@ -2,24 +2,23 @@
 
 import requests
 import datetime
-import zoneinfo
 import json
-import time
 import bs4
 import re
 
 CACHE_FILE = 'cache.json'
 REGEX_HOUR = re.compile(r"([0-9]{1,2})[hH:]([0-9]{0,2})[mM]?")
+DIFF_TO_MATCH_BREST_ON_THAT_SERVER = datetime.timedelta(seconds=2697)  # yes that's dirty. Please explain to me how to do that properly.
 
 def now_in_year_month_day(type_=int) -> (int, int, int) or str:
-    now = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Paris'))
+    now = datetime.datetime.now() - DIFF_TO_MATCH_BREST_ON_THAT_SERVER
     if type_ is str:
         return f"{now.year}-{now.month:02d}-{now.day:02d}"
     else:
         return now.year, now.month, now.day
 
 def now_in_hour_and_minutes(type_=int) -> (int, int) or str:
-    now = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Paris'))
+    now = datetime.datetime.now() - DIFF_TO_MATCH_BREST_ON_THAT_SERVER
     if type_ is str:
         return f"{now.hour:02d}h{now.minute:02d}"
     else:
