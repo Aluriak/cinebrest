@@ -162,12 +162,12 @@ def parse_le_celtic() -> [dict]:
 
 
 
-def repr_hour_and_kind(it:iter, where) -> [str]:
-    return tuple(f"{h} ({k}) à {where}" for h, k in it)
+def repr_hour_and_kind(it:iter) -> [str]:
+    return tuple(f"{h} ({k}) à {w}" for h, k, w in it)
 
 def slugified(title: str) -> str:
     "Tries hard to get a unique representation of given movie title"
-    title = title.lower().replace(' -', '').replace('  ', ' ').replace(' ', '-')
+    title = title.lower().replace(' :', '').replace(' -', '').replace('  ', ' ').replace(' ', '-')
     unwanted = '():\'"'
     OK = {v: k for k, vs in {
         'a': 'àäâ',
@@ -195,8 +195,8 @@ def parse_all(use_cache: bool = True):
         if not movie['today']:
             continue  # ignore that one, there is no séances today
         obj = movies.setdefault(slug, {})
-        obj.setdefault('today', []).extend(movie['today'])
-        obj.setdefault('hours', []).extend((hour, kind) for hour, kind in movie['today'] if is_in_the_future(hour))
+        obj.setdefault('today', []).extend((hour, kind, movie['where']) for hour, kind in movie['today'])
+        obj.setdefault('hours', []).extend((hour, kind, movie['where']) for hour, kind in movie['today'] if is_in_the_future(hour))
         if 'slug' in movie and len(movie['slug']) > len(obj.get('slug', '')):
             obj['slug'] = movie['slug']
         if 'where' in movie and len(movie['where']) > len(obj.get('where', '')):
@@ -206,8 +206,8 @@ def parse_all(use_cache: bool = True):
         if 'synopsis' in movie and len(movie['synopsis']) > len(obj.get('synopsis', '')):
             obj['synopsis'] = movie['synopsis']
     for movie in movies.values():
-        movie['desc_hours'] = repr_hour_and_kind(movie['hours'], movie['where'])
-        movie['desc_today'] = repr_hour_and_kind(movie['today'], movie['where'])
+        movie['desc_hours'] = repr_hour_and_kind(movie['hours'])
+        movie['desc_today'] = repr_hour_and_kind(movie['today'])
 
     save_cache()
     yield from movies.values()
