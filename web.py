@@ -21,6 +21,7 @@ def run() -> [str]:
     if movie_ignored:
         yield f"\n<br/><br/><small>{len(movie_ignored)} films ont été ignorés car il n'y a plus de séances aujourd'hui après {now_in_hour_and_minutes(str)}.</small>"
     yield f"\n<br><br><small>Last update the {now_in_year_month_day(str)} at {now_in_hour_and_minutes(str)}</small>"
+    yield f"\n<small>[source code](https://github.com/aluriak/cinebrest)</small>"
 
 
 if __name__ == "__main__":
