@@ -65,6 +65,7 @@ def get_page(url: str, html=True, session=None) -> bs4.BeautifulSoup:
     CACHE[url] = (session or requests).get(url).text
     return parser(url)
 
+
 def parse_les_studios(*, URL='https://www.cine-studios.fr/films-a-l-affiche/') -> [dict]:
     soup = get_page(URL)
     for elm in soup.find_all(**{'class': 'btn bt-film-small bthorai'}):
@@ -75,7 +76,7 @@ def parse_les_studios(*, URL='https://www.cine-studios.fr/films-a-l-affiche/') -
         todays = tuple((hour, '?') for hour in (str(elm.text).strip() for elm in todays[0]) if hour)
         yield {
             'title': next(iter(soup.find_all('h3', **{'class': 'fn'}))).text,
-            'desc': next(iter(soup.find_all('p', **{'class': 'synopsis'}))).text,
+            'synopsis': next(iter(soup.find_all('p', **{'class': 'synopsis'}))).text,
             'today': todays,
             'ok': tuple((hour, kind) for hour, kind in todays if is_in_the_future(hour)),
             'where': 'Les Studios',
@@ -109,19 +110,81 @@ def parse_paté_gaumont() -> [dict]:
             )
             yield {
                 'title': movie_metadata['title'],
-                'desc': movie_metadata['synopsis'],
+                'synopsis': movie_metadata['synopsis'],
                 'today': todays,
                 'ok': todays,
                 'where': 'Multiplexe Liberté',
             }
 
 
+def parse_le_celtic() -> [dict]:
+    soup = get_page('https://www.cgrcinemas.fr/brest/films-a-l-affiche/')
+    today_number = now_in_year_month_day()[2]  # day number
+    for elm in soup.find_all('a', **{'class': 'vignette url'}):
+        subsoup = get_page(elm['href'])
+        title = next(elm.text for elm in subsoup.find_all('h1'))
+        # find numjour, the id (jour1, jour2,… jour9) that corresponds to today
+        for celjour in subsoup.find_all('div', **{'class': 'fcel'}):
+            if 'celtags' in celjour.attrs:
+                continue  # this is not what we are looking for
+            # print(celjour.text)
+            noms = tuple(celjour.find_all('a', **{'class': 'hr_jour'}))
+            # print(noms)
+            # print()
+            if not noms: continue
+            assert len(noms) == 1, noms
+            if int(tuple(noms[0].children)[1].strip()) == today_number:
+                numjour = celjour.attrs['class'][1]
+                break
+        else:
+            # print(f"Today ({today_number}) wasn't found in CGR data for movie {title}.")
+            continue  # that's ok: the movie is probably not yet out
+        # print('NUMJOUR:', numjour)
+        target = tuple(subsoup.find_all('div', **{'class': f'tab_seances {numjour}'})) or tuple(subsoup.find_all('div', **{'class': f'tab_seances {numjour} active'}))
+        assert len(target) == 1, len(target)
+        target = target[0]
+        # print(target)
+        hours = []
+        for kindline in target.find_all('div', **{'class': 'frow'}):
+            if 'VO' in kindline.attrs['id']:
+                kind = 'VO'
+            elif 'VF' in kindline.attrs['id']:
+                kind = 'VF'
+            else:
+                kind = 'VF'
+                print(f"kindline {kindline.attrs['id']} not handled. {kind} will be used.")
+            hours.extend(tuple((e.text.strip(), kind) for e in kindline.find_all('span', **{'class': 'hor'})))
+
+        yield {
+            'title': title,
+            'synopsis': next(iter(subsoup.find_all('p', **{'class': 'ff_synopsis'}))).text.strip(),
+            'today': hours,
+            'ok': tuple((hour, kind) for hour, kind in hours if is_in_the_future(hour)),
+            'where': 'Le Celtic',
+        }
+
+
+
 CACHE = {}
-def parse_all():
+def parse_all(use_cache: bool = True):
     global CACHE
-    CACHE = load_cache()
-    save_cache()
+    CACHE = load_cache() if use_cache else {}
+    if use_cache: save_cache()
     # print(f"{len(CACHE)} pages cached")
-    yield from parse_les_studios()
-    yield from parse_paté_gaumont()
+    movies = {}  # name -> horaires
+    def gen_all():
+        yield from parse_les_studios()
+        yield from parse_paté_gaumont()
+        yield from parse_le_celtic()
+    for movie in gen_all():
+        descs = tuple(f"{h} ({k}) à {movie['where']}" for h, k in movie['ok'])
+        descs_todays = tuple(f"{h} ({k}) à {movie['where']}" for h, k in movie['today'])
+        obj = movies.setdefault(movie['title'], {})
+        obj.setdefault('hours', []).extend(descs)
+        obj.setdefault('today', []).extend(descs_todays)
+        if 'title' in movie and len(movie['title']) > len(obj.get('title', '')):
+            obj['title'] = movie['title']
+        if 'synopsis' in movie and len(movie['synopsis']) > len(obj.get('synopsis', '')):
+            obj['synopsis'] = movie['synopsis']
     save_cache()
+    yield from movies.values()
