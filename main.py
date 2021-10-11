@@ -7,13 +7,12 @@ if __name__ == "__main__":
     for movie in parse_all():
         if movie['hours']:
             print()
-            print('——————————————————————————————————————————————')
             print(movie['title'])
-            for desc in movie['hours']:
+            for desc in movie['desc_hours']:
                 print('\t' + desc)
             nb_ignored = len(movie['today']) - len(movie['hours'])
             if nb_ignored:
-                print(f"({nb_ignored} séances ont été ignorées car démarrant avant {now_in_hour_and_minutes(str)})")
+                print(f"\t({nb_ignored} séances ont été ignorées car démarrant avant {now_in_hour_and_minutes(str)})")
         else:
             movie_ignored.add(movie['title'])
     if movie_ignored:
