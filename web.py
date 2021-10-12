@@ -8,7 +8,8 @@ OUTFILE = 'index.html'
 
 def run() -> [str]:
     movie_ignored = set()
-    for movie in parse_all(use_cache=False):
+    its_a_brand_new_day = now_in_hour_and_minutes()[0] < 2
+    for movie in parse_all(use_cache=not its_a_brand_new_day):
         if movie['hours']:
             yield f"\n\n## {movie['title']}\n"
             for desc in movie['desc_hours']:
